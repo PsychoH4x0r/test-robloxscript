@@ -1,0 +1,218 @@
+-- Brookhaven Part Scanner GUI - FIXED VERSION
+-- Pasti muncul di executor (Synapse, Fluxus, dll)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- GUI Setup (INI YANG PENTING!)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PartScannerGUI"
+screenGui.ResetOnSpawn = false          -- ← FIX UTAMA
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+title.Text = "🔍 BROOKHAVEN PART SCANNER"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.Parent = mainFrame
+
+-- Close Button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -40, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- Category Buttons
+local btnY = 50
+local categories = {
+    {"🚗 VEHICLES", "vehicles"},
+    {"🚪 DOORS", "doors"},
+    {"💡 LIGHTS", "lights"},
+    {"🪑 SEATS", "seats"},
+    {"🪟 WINDOWS", "windows"},
+    {"🎮 INTERACTIVE", "interactive"}
+}
+local categoryButtons = {}
+for i, cat in ipairs(categories) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 180, 0, 35)
+    btn.Position = UDim2.new(0, 10 + ((i-1)%2)*190, 0, btnY + (math.floor((i-1)/2))*40)
+    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    btn.Text = cat[1]
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Parent = mainFrame
+   
+    categoryButtons[cat[2]] = btn
+end
+
+-- Result Text Box
+local resultBox = Instance.new("TextBox")
+resultBox.Size = UDim2.new(1, -20, 0, 250)
+resultBox.Position = UDim2.new(0, 10, 0, 180)
+resultBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+resultBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+resultBox.Font = Enum.Font.Code
+resultBox.TextSize = 12
+resultBox.TextWrapped = true
+resultBox.MultiLine = true
+resultBox.ClearTextOnFocus = false
+resultBox.TextEditable = false
+resultBox.Text = "Click a category to scan..."
+resultBox.Parent = mainFrame
+
+-- Scan Button
+local scanBtn = Instance.new("TextButton")
+scanBtn.Size = UDim2.new(1, -20, 0, 40)
+scanBtn.Position = UDim2.new(0, 10, 1, -50)
+scanBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+scanBtn.Text = "🔍 SCAN ALL CATEGORIES"
+scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+scanBtn.Font = Enum.Font.GothamBold
+scanBtn.TextSize = 16
+scanBtn.Parent = mainFrame
+
+-- Data storage
+local partsData = {
+    vehicles = {}, doors = {}, lights = {}, seats = {}, windows = {}, interactive = {}
+}
+
+-- Function to scan (SUDAH DIBENAH!)
+local function scanCategory(category)
+    resultBox.Text = "Scanning " .. category .. "..."
+    task.wait(0.1)
+   
+    local results = {}
+   
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local name = obj.Name:lower()
+            local path = obj:GetFullName()
+           
+            -- FIX: string concatenation pake .. bukan +
+            if #path > 100 then
+                path = string.sub(path, 1, 100) .. "..."
+            end
+           
+            local anchored = obj.Anchored and "YES" or "NO ❌"
+            local locked = "Unknown"
+            pcall(function() locked = obj.Locked and "YES" or "NO" end)
+           
+            local partString = string.format("[%s] %s\n📍 %s\n⚓ Anchored: %s\n---",
+                obj.ClassName, obj.Name, path, anchored)
+           
+            -- Filter kategori
+            if category == "vehicles" and (name:find("wheel") or name:find("car") or name:find("mobil") or name:find("tire") or name:find("ban")) then
+                table.insert(results, partString)
+            elseif category == "doors" and (name:find("door") or name:find("pintu") or name:find("gate")) then
+                table.insert(results, partString)
+            elseif category == "lights" and (name:find("light") or name:find("lamp") or name:find("lampu")) then
+                table.insert(results, partString)
+            elseif category == "seats" and (name:find("seat") or name:find("kursi") or name:find("chair")) then
+                table.insert(results, partString)
+            elseif category == "windows" and (name:find("window") or name:find("jendela")) then
+                table.insert(results, partString)
+            elseif category == "interactive" and (obj:IsA("MeshPart") or obj:IsA("UnionOperation")) then
+                table.insert(results, partString)
+            end
+        end
+    end
+   
+    if #results > 0 then
+        local output = string.format("=== %s (%d found) ===\n\n", string.upper(category), #results)
+        for i = 1, math.min(20, #results) do
+            output = output .. results[i] .. "\n\n"
+        end
+        if #results > 20 then
+            output = output .. string.format("\n... and %d more parts", #results - 20)
+        end
+        resultBox.Text = output
+    else
+        resultBox.Text = string.format("❌ No %s found in workspace", category)
+    end
+end
+
+-- Connect category buttons
+for cat, btn in pairs(categoryButtons) do
+    btn.MouseButton1Click:Connect(function()
+        for _, otherBtn in pairs(categoryButtons) do
+            otherBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+        scanCategory(cat)
+    end)
+end
+
+-- Scan All
+scanBtn.MouseButton1Click:Connect(function()
+    resultBox.Text = "Scanning all categories...\n"
+   
+    for cat, _ in pairs(partsData) do
+        partsData[cat] = {}
+    end
+   
+    local total = 0
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local name = obj.Name:lower()
+           
+            if name:find("wheel") or name:find("car") or name:find("mobil") then
+                table.insert(partsData.vehicles, obj.Name)
+                total += 1
+            elseif name:find("door") or name:find("pintu") then
+                table.insert(partsData.doors, obj.Name)
+                total += 1
+            elseif name:find("light") or name:find("lamp") then
+                table.insert(partsData.lights, obj.Name)
+                total += 1
+            elseif name:find("seat") or name:find("kursi") then
+                table.insert(partsData.seats, obj.Name)
+                total += 1
+            elseif name:find("window") or name:find("jendela") then
+                table.insert(partsData.windows, obj.Name)
+                total += 1
+            elseif obj:IsA("MeshPart") or obj:IsA("UnionOperation") then
+                table.insert(partsData.interactive, obj.Name)
+                total += 1
+            end
+        end
+    end
+   
+    local summary = string.format("✅ SCAN COMPLETE!\n\nTotal parts found: %d\n\n", total)
+    summary = summary .. string.format("🚗 Vehicles: %d\n", #partsData.vehicles)
+    summary = summary .. string.format("🚪 Doors: %d\n", #partsData.doors)
+    summary = summary .. string.format("💡 Lights: %d\n", #partsData.lights)
+    summary = summary .. string.format("🪑 Seats: %d\n", #partsData.seats)
+    summary = summary .. string.format("🪟 Windows: %d\n", #partsData.windows)
+    summary = summary .. string.format("🎮 Interactive: %d\n\n", #partsData.interactive)
+    summary = summary .. "Click category buttons above to see details!"
+   
+    resultBox.Text = summary
+end)
+
+-- Auto scan pertama
+scanBtn.MouseButton1Click:Fire()
+
+print("✅ Part Scanner GUI LOADED! (Fixed by Grok)")
