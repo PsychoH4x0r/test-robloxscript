@@ -1,218 +1,553 @@
--- Brookhaven Part Scanner GUI - FIXED VERSION
--- Pasti muncul di executor (Synapse, Fluxus, dll)
+-- Brookhaven ULTIMATE TROLL MENU by Unknown1337
+-- Versi: 3.0 - FULL PARTS MANIPULATION
+-- Berdasarkan scan: DOORS(480), WINDOWS(227), SEATS(940), INTERACTIVE(9063)
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
--- GUI Setup (INI YANG PENTING!)
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PartScannerGUI"
-screenGui.ResetOnSpawn = false          -- ← FIX UTAMA
-screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- =============================================
+-- PART 1: FORCE SYSTEM (CORE)
+-- =============================================
+local Folder = Instance.new("Folder", Workspace)
+Folder.Name = "TrollSystem_" .. math.random(1000, 9999)
 
--- Main Frame
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 500)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+local ControlPart = Instance.new("Part", Folder)
+ControlPart.Name = "Controller"
+ControlPart.Anchored = true
+ControlPart.CanCollide = false
+ControlPart.Transparency = 1
+ControlPart.Size = Vector3.new(1, 1, 1)
 
--- Title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-title.Text = "🔍 BROOKHAVEN PART SCANNER"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.Parent = mainFrame
+local Attachment1 = Instance.new("Attachment", ControlPart)
+local lockedPart = nil
+local lockMode = "None" -- "None", "Part", "Player", "Cursor"
 
--- Close Button
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 40, 0, 40)
-closeBtn.Position = UDim2.new(1, -40, 0, 0)
-closeBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 20
-closeBtn.Parent = mainFrame
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
--- Category Buttons
-local btnY = 50
-local categories = {
-    {"🚗 VEHICLES", "vehicles"},
-    {"🚪 DOORS", "doors"},
-    {"💡 LIGHTS", "lights"},
-    {"🪑 SEATS", "seats"},
-    {"🪟 WINDOWS", "windows"},
-    {"🎮 INTERACTIVE", "interactive"}
-}
-local categoryButtons = {}
-for i, cat in ipairs(categories) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 180, 0, 35)
-    btn.Position = UDim2.new(0, 10 + ((i-1)%2)*190, 0, btnY + (math.floor((i-1)/2))*40)
-    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    btn.Text = cat[1]
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.Parent = mainFrame
-   
-    categoryButtons[cat[2]] = btn
-end
-
--- Result Text Box
-local resultBox = Instance.new("TextBox")
-resultBox.Size = UDim2.new(1, -20, 0, 250)
-resultBox.Position = UDim2.new(0, 10, 0, 180)
-resultBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-resultBox.TextColor3 = Color3.fromRGB(0, 255, 0)
-resultBox.Font = Enum.Font.Code
-resultBox.TextSize = 12
-resultBox.TextWrapped = true
-resultBox.MultiLine = true
-resultBox.ClearTextOnFocus = false
-resultBox.TextEditable = false
-resultBox.Text = "Click a category to scan..."
-resultBox.Parent = mainFrame
-
--- Scan Button
-local scanBtn = Instance.new("TextButton")
-scanBtn.Size = UDim2.new(1, -20, 0, 40)
-scanBtn.Position = UDim2.new(0, 10, 1, -50)
-scanBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-scanBtn.Text = "🔍 SCAN ALL CATEGORIES"
-scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-scanBtn.Font = Enum.Font.GothamBold
-scanBtn.TextSize = 16
-scanBtn.Parent = mainFrame
-
--- Data storage
-local partsData = {
-    vehicles = {}, doors = {}, lights = {}, seats = {}, windows = {}, interactive = {}
-}
-
--- Function to scan (SUDAH DIBENAH!)
-local function scanCategory(category)
-    resultBox.Text = "Scanning " .. category .. "..."
-    task.wait(0.1)
-   
-    local results = {}
-   
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local name = obj.Name:lower()
-            local path = obj:GetFullName()
-           
-            -- FIX: string concatenation pake .. bukan +
-            if #path > 100 then
-                path = string.sub(path, 1, 100) .. "..."
-            end
-           
-            local anchored = obj.Anchored and "YES" or "NO ❌"
-            local locked = "Unknown"
-            pcall(function() locked = obj.Locked and "YES" or "NO" end)
-           
-            local partString = string.format("[%s] %s\n📍 %s\n⚓ Anchored: %s\n---",
-                obj.ClassName, obj.Name, path, anchored)
-           
-            -- Filter kategori
-            if category == "vehicles" and (name:find("wheel") or name:find("car") or name:find("mobil") or name:find("tire") or name:find("ban")) then
-                table.insert(results, partString)
-            elseif category == "doors" and (name:find("door") or name:find("pintu") or name:find("gate")) then
-                table.insert(results, partString)
-            elseif category == "lights" and (name:find("light") or name:find("lamp") or name:find("lampu")) then
-                table.insert(results, partString)
-            elseif category == "seats" and (name:find("seat") or name:find("kursi") or name:find("chair")) then
-                table.insert(results, partString)
-            elseif category == "windows" and (name:find("window") or name:find("jendela")) then
-                table.insert(results, partString)
-            elseif category == "interactive" and (obj:IsA("MeshPart") or obj:IsA("UnionOperation")) then
-                table.insert(results, partString)
-            end
-        end
-    end
-   
-    if #results > 0 then
-        local output = string.format("=== %s (%d found) ===\n\n", string.upper(category), #results)
-        for i = 1, math.min(20, #results) do
-            output = output .. results[i] .. "\n\n"
-        end
-        if #results > 20 then
-            output = output .. string.format("\n... and %d more parts", #results - 20)
-        end
-        resultBox.Text = output
-    else
-        resultBox.Text = string.format("❌ No %s found in workspace", category)
-    end
-end
-
--- Connect category buttons
-for cat, btn in pairs(categoryButtons) do
-    btn.MouseButton1Click:Connect(function()
-        for _, otherBtn in pairs(categoryButtons) do
-            otherBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
-        scanCategory(cat)
+-- =============================================
+-- PART 2: NOTIFICATION SYSTEM
+-- =============================================
+local function showNotification(title, message, duration, isSuccess)
+    duration = duration or 3
+    isSuccess = isSuccess or false
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "TrollNotif_" .. math.random(1000, 9999)
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ResetOnSpawn = false
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 350, 0, 80)
+    frame.Position = UDim2.new(0.5, -175, 0, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BorderSizePixel = 0
+    frame.Parent = ScreenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = isSuccess and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 25)
+    titleLabel.Position = UDim2.new(0, 10, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = stroke.Color
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 16
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = frame
+    
+    local msgLabel = Instance.new("TextLabel")
+    msgLabel.Size = UDim2.new(1, -20, 0, 40)
+    msgLabel.Position = UDim2.new(0, 10, 0, 30)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.Text = message
+    msgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    msgLabel.Font = Enum.Font.Gotham
+    msgLabel.TextSize = 12
+    msgLabel.TextWrapped = true
+    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+    msgLabel.Parent = frame
+    
+    -- Animasi muncul
+    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -175, 0, 20)})
+    tweenIn:Play()
+    
+    task.wait(duration)
+    
+    local tweenOut = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -175, 0, -100)})
+    tweenOut:Play()
+    tweenOut.Completed:Connect(function()
+        ScreenGui:Destroy()
     end)
 end
 
--- Scan All
-scanBtn.MouseButton1Click:Connect(function()
-    resultBox.Text = "Scanning all categories...\n"
-   
-    for cat, _ in pairs(partsData) do
-        partsData[cat] = {}
+-- =============================================
+-- PART 3: COLLECT ALL PARTS (BERDASARKAN SCAN LU)
+-- =============================================
+local Parts = {
+    doors = {},          -- 480 doors
+    windows = {},        -- 227 windows
+    seats = {},          -- 940 seats
+    rigs = {},           -- 9063 interactive (rig/mannequin)
+    creditCards = {},    -- dari mall
+    carwash = {},        -- dari carwash
+    tools = {},          -- keycard, carryon
+    jobGivers = {},      -- bank, day care
+    lights = {}          -- semua lampu
+}
+
+local totalParts = 0
+
+local function scanAllParts()
+    -- Reset
+    for category, _ in pairs(Parts) do
+        Parts[category] = {}
     end
-   
-    local total = 0
-    for _, obj in pairs(workspace:GetDescendants()) do
+    totalParts = 0
+    
+    for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local name = obj.Name:lower()
-           
-            if name:find("wheel") or name:find("car") or name:find("mobil") then
-                table.insert(partsData.vehicles, obj.Name)
-                total += 1
-            elseif name:find("door") or name:find("pintu") then
-                table.insert(partsData.doors, obj.Name)
-                total += 1
-            elseif name:find("light") or name:find("lamp") then
-                table.insert(partsData.lights, obj.Name)
-                total += 1
-            elseif name:find("seat") or name:find("kursi") then
-                table.insert(partsData.seats, obj.Name)
-                total += 1
-            elseif name:find("window") or name:find("jendela") then
-                table.insert(partsData.windows, obj.Name)
-                total += 1
-            elseif obj:IsA("MeshPart") or obj:IsA("UnionOperation") then
-                table.insert(partsData.interactive, obj.Name)
-                total += 1
+            local path = obj:GetFullName():lower()
+            local class = obj.ClassName
+            local anchored = obj.Anchored
+            
+            -- DOORS (480)
+            if name:find("door") or name:find("pintu") or name:find("gate") or name:find("cubdoors") then
+                table.insert(Parts.doors, obj)
+                totalParts = totalParts + 1
+            
+            -- WINDOWS (227)
+            elseif name:find("window") or name:find("jendela") or name:find("storewindow") then
+                table.insert(Parts.windows, obj)
+                totalParts = totalParts + 1
+            
+            -- SEATS (940)
+            elseif obj:IsA("Seat") or obj:IsA("VehicleSeat") or name:find("seat") or name:find("kursi") or name:find("chair") then
+                table.insert(Parts.seats, obj)
+                totalParts = totalParts + 1
+            
+            -- RIGS / MANNEQUIN (9063 interactive)
+            elseif path:find("characterdisplays") or path:find("rig") or 
+                   name:find("head") or name:find("torso") or name:find("arm") or 
+                   name:find("leg") or name:find("hand") or name:find("foot") then
+                table.insert(Parts.rigs, obj)
+                totalParts = totalParts + 1
+            
+            -- CREDIT CARDS
+            elseif name:find("credit") or name:find("card") or path:find("creditcardreaders") then
+                table.insert(Parts.creditCards, obj)
+                totalParts = totalParts + 1
+            
+            -- CARWASH
+            elseif path:find("carwash") or name:find("soap") then
+                table.insert(Parts.carwash, obj)
+                totalParts = totalParts + 1
+            
+            -- TOOLS
+            elseif path:find("tools") or name:find("key") or name:find("carry") then
+                table.insert(Parts.tools, obj)
+                totalParts = totalParts + 1
+            
+            -- JOB GIVERS
+            elseif path:find("jobgivers") or name:find("bank") or name:find("day care") then
+                table.insert(Parts.jobGivers, obj)
+                totalParts = totalParts + 1
+            
+            -- LIGHTS
+            elseif name:find("light") or name:find("lamp") or name:find("lampu") then
+                table.insert(Parts.lights, obj)
+                totalParts = totalParts + 1
             end
         end
     end
-   
-    local summary = string.format("✅ SCAN COMPLETE!\n\nTotal parts found: %d\n\n", total)
-    summary = summary .. string.format("🚗 Vehicles: %d\n", #partsData.vehicles)
-    summary = summary .. string.format("🚪 Doors: %d\n", #partsData.doors)
-    summary = summary .. string.format("💡 Lights: %d\n", #partsData.lights)
-    summary = summary .. string.format("🪑 Seats: %d\n", #partsData.seats)
-    summary = summary .. string.format("🪟 Windows: %d\n", #partsData.windows)
-    summary = summary .. string.format("🎮 Interactive: %d\n\n", #partsData.interactive)
-    summary = summary .. "Click category buttons above to see details!"
-   
-    resultBox.Text = summary
+    
+    return Parts
+end
+
+-- Scan pertama
+scanAllParts()
+
+-- =============================================
+-- PART 4: FORCE FUNCTION (buat manipulasi part)
+-- =============================================
+local function forcePart(part)
+    if not part or not part:IsA("BasePart") then return end
+    
+    -- Bersihin constraints lama
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("BodyMover") or child:IsA("Constraint") or 
+           child:IsA("AlignPosition") or child:IsA("Torque") then
+            child:Destroy()
+        end
+    end
+    
+    -- Set properties
+    part.Anchored = false
+    part.CanCollide = true
+    
+    -- Tambah constraints baru
+    local torque = Instance.new("Torque", part)
+    torque.Torque = Vector3.new(100000, 100000, 100000)
+    
+    local align = Instance.new("AlignPosition", part)
+    local attachment2 = Instance.new("Attachment", part)
+    
+    torque.Attachment0 = attachment2
+    align.MaxForce = 9e9
+    align.MaxVelocity = math.huge
+    align.Responsiveness = 200
+    align.Attachment0 = attachment2
+    align.Attachment1 = Attachment1
+end
+
+-- Apply force ke semua part yang anchored false
+local function applyForceToAll()
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent and not part.Anchored then
+                forcePart(part)
+                count = count + 1
+            end
+        end
+    end
+    showNotification("✅ FORCE APPLIED", count .. " parts siap dimanipulasi", 3, true)
+end
+
+-- =============================================
+-- PART 5: TROLL FUNCTIONS
+-- =============================================
+
+-- SPIN semua parts
+local function spinAll(angle)
+    angle = angle or 45
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.CFrame = part.CFrame * CFrame.Angles(0, math.rad(angle), 0)
+                count = count + 1
+            end
+        end
+    end
+    showNotification("🌀 SPIN", count .. " parts diputar " .. angle .. "°", 2, true)
+end
+
+-- FLY semua parts ke atas
+local function flyAll(height)
+    height = height or 15
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.CFrame = part.CFrame + Vector3.new(0, height, 0)
+                count = count + 1
+            end
+        end
+    end
+    showNotification("🕊️ FLY", count .. " parts terbang " .. height .. " studs", 2, true)
+end
+
+-- SINK semua parts ke bawah
+local function sinkAll(depth)
+    depth = depth or 15
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.CFrame = part.CFrame - Vector3.new(0, depth, 0)
+                count = count + 1
+            end
+        end
+    end
+    showNotification("📉 SINK", count .. " parts turun " .. depth .. " studs", 2, true)
+end
+
+-- RAINBOW (ganti warna random)
+local function rainbowAll()
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.BrickColor = BrickColor.random()
+                count = count + 1
+            end
+        end
+    end
+    showNotification("🌈 RAINBOW", count .. " parts ganti warna", 2, true)
+end
+
+-- INVISIBLE (transparan)
+local function toggleInvisible()
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.Transparency = part.Transparency == 0 and 0.8 or 0
+                count = count + 1
+            end
+        end
+    end
+    showNotification("👻 INVISIBLE", count .. " parts diubah transparansinya", 2, true)
+end
+
+-- EXPLODE (hamburin)
+local function explodeAll()
+    local count = 0
+    for category, parts in pairs(Parts) do
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.CFrame = part.CFrame + Vector3.new(
+                    math.random(-30, 30),
+                    math.random(10, 50),
+                    math.random(-30, 30)
+                )
+                count = count + 1
+            end
+        end
+    end
+    showNotification("💥 EXPLODE", count .. " parts berhamburan!", 2, true)
+end
+
+-- RESCAN parts
+local function rescanParts()
+    scanAllParts()
+    applyForceToAll()
+    showNotification("🔄 RESCAN", string.format("Ditemukan: Doors:%d Windows:%d Seats:%d Rigs:%d Lainnya:%d Total:%d", 
+        #Parts.doors, #Parts.windows, #Parts.seats, #Parts.rigs, 
+        #Parts.creditCards + #Parts.carwash + #Parts.tools + #Parts.jobGivers + #Parts.lights,
+        totalParts), 5, true)
+end
+
+-- =============================================
+-- PART 6: CREATE GUI
+-- =============================================
+local function createGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "BrookhavenTroll_" .. math.random(1000, 9999)
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.ResetOnSpawn = false
+    
+    -- Main Frame
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(0, 350, 0, 500)
+    main.Position = UDim2.new(0.5, -175, 0.5, -250)
+    main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    main.BackgroundTransparency = 0.1
+    main.BorderSizePixel = 0
+    main.Active = true
+    main.Draggable = true
+    main.Parent = ScreenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = main
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 0, 0)
+    stroke.Thickness = 2
+    stroke.Parent = main
+    
+    -- Title Bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 45)
+    titleBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = main
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.Parent = titleBar
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "🔥 BROOKHAVEN TROLL"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = titleBar
+    
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(1, -35, 0, 7)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.BackgroundTransparency = 0.3
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Parent = titleBar
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- Stats Frame
+    local statsFrame = Instance.new("Frame")
+    statsFrame.Size = UDim2.new(1, -20, 0, 80)
+    statsFrame.Position = UDim2.new(0, 10, 0, 55)
+    statsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    statsFrame.Parent = main
+    
+    local statsCorner = Instance.new("UICorner")
+    statsCorner.CornerRadius = UDim.new(0, 8)
+    statsCorner.Parent = statsFrame
+    
+    local statsText = Instance.new("TextLabel")
+    statsText.Size = UDim2.new(1, -10, 1, -10)
+    statsText.Position = UDim2.new(0, 5, 0, 5)
+    statsText.BackgroundTransparency = 1
+    statsText.Text = string.format("DOORS: %d | WINDOWS: %d | SEATS: %d\nRIGS: %d | TOTAL: %d", 
+        #Parts.doors, #Parts.windows, #Parts.seats, #Parts.rigs, totalParts)
+    statsText.TextColor3 = Color3.fromRGB(0, 255, 0)
+    statsText.Font = Enum.Font.Gotham
+    statsText.TextSize = 11
+    statsText.TextWrapped = true
+    statsText.TextXAlignment = Enum.TextXAlignment.Left
+    statsText.Parent = statsFrame
+    
+    -- Buttons Grid
+    local buttons = {
+        {"🌀 SPIN", Color3.fromRGB(255, 100, 100), function() spinAll(45) end},
+        {"🔄 SPIN-", Color3.fromRGB(255, 150, 150), function() spinAll(-45) end},
+        {"🕊️ FLY", Color3.fromRGB(100, 255, 100), function() flyAll(15) end},
+        {"📉 SINK", Color3.fromRGB(100, 100, 255), function() sinkAll(15) end},
+        {"🌈 RAINBOW", Color3.fromRGB(255, 255, 100), function() rainbowAll() end},
+        {"👻 INVISIBLE", Color3.fromRGB(200, 100, 255), function() toggleInvisible() end},
+        {"💥 EXPLODE", Color3.fromRGB(255, 50, 50), function() explodeAll() end},
+        {"🔧 FORCE", Color3.fromRGB(100, 200, 255), function() applyForceToAll() end},
+        {"🔄 RESCAN", Color3.fromRGB(150, 150, 150), function() rescanParts() 
+            statsText.Text = string.format("DOORS: %d | WINDOWS: %d | SEATS: %d\nRIGS: %d | TOTAL: %d", 
+                #Parts.doors, #Parts.windows, #Parts.seats, #Parts.rigs, totalParts)
+        end}
+    }
+    
+    local btnWidth = 100
+    local btnHeight = 35
+    local startX = 15
+    local startY = 150
+    local colSpacing = 105
+    local rowSpacing = 40
+    
+    for i, btnData in ipairs(buttons) do
+        local row = math.floor((i-1) / 3)
+        local col = (i-1) % 3
+        
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, btnWidth, 0, btnHeight)
+        btn.Position = UDim2.new(0, startX + (col * colSpacing), 0, startY + (row * rowSpacing))
+        btn.BackgroundColor3 = btnData[2]
+        btn.Text = btnData[1]
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 12
+        btn.Parent = main
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(btnData[3])
+    end
+    
+    -- Controls Info
+    local infoFrame = Instance.new("Frame")
+    infoFrame.Size = UDim2.new(1, -20, 0, 40)
+    infoFrame.Position = UDim2.new(0, 10, 0, 420)
+    infoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    infoFrame.Parent = main
+    
+    local infoCorner = Instance.new("UICorner")
+    infoCorner.CornerRadius = UDim.new(0, 8)
+    infoCorner.Parent = infoFrame
+    
+    local infoText = Instance.new("TextLabel")
+    infoText.Size = UDim2.new(1, -10, 1, 0)
+    infoText.Position = UDim2.new(0, 5, 0, 0)
+    infoText.BackgroundTransparency = 1
+    infoText.Text = "Q: Lock part | E: Manual pos | Click part to lock"
+    infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    infoText.Font = Enum.Font.Gotham
+    infoText.TextSize = 10
+    infoText.TextWrapped = true
+    infoText.TextXAlignment = Enum.TextXAlignment.Left
+    infoText.Parent = infoFrame
+    
+    return ScreenGui
+end
+
+-- =============================================
+-- PART 7: INPUT HANDLING (Q dan E)
+-- =============================================
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    
+    -- Q = lock/unlock part
+    if input.KeyCode == Enum.KeyCode.Q then
+        if lockMode == "None" and Mouse.Target then
+            lockedPart = Mouse.Target
+            lockMode = "Part"
+            forcePart(lockedPart)
+            showNotification("🔒 PART LOCKED", "Locked to: " .. lockedPart.Name, 2, true)
+        else
+            lockMode = "None"
+            lockedPart = nil
+            showNotification("🔓 UNLOCKED", "Part released", 2)
+        end
+    end
+    
+    -- E = manual position (cursor)
+    if input.KeyCode == Enum.KeyCode.E then
+        lockMode = "Cursor"
+        lockedPart = nil
+        showNotification("📍 MANUAL MODE", "Following cursor", 2)
+    end
 end)
 
--- Auto scan pertama
-scanBtn.MouseButton1Click:Fire()
+-- Update attachment position
+RunService.RenderStepped:Connect(function()
+    if lockMode == "Part" and lockedPart and lockedPart.Parent then
+        Attachment1.WorldCFrame = lockedPart.CFrame + Vector3.new(0, 2, 0)
+    else
+        Attachment1.WorldCFrame = Mouse.Hit + Vector3.new(0, 5, 0)
+    end
+end)
 
-print("✅ Part Scanner GUI LOADED! (Fixed by Grok)")
+-- =============================================
+-- PART 8: STARTUP
+-- =============================================
+-- Auto-scan dan force ke semua parts yang anchored false
+applyForceToAll()
+
+-- Create GUI
+local gui = createGUI()
+
+-- Welcome notification
+showNotification("🚀 BROOKHAVEN TROLL LOADED", string.format("Found: Doors:%d Windows:%d Seats:%d Rigs:%d Total:%d\nPress Q to lock parts, E for manual", 
+    #Parts.doors, #Parts.windows, #Parts.seats, #Parts.rigs, totalParts), 8, true)
+
+print("=== BROOKHAVEN TROLL MENU LOADED ===")
+print("Doors:", #Parts.doors)
+print("Windows:", #Parts.windows)
+print("Seats:", #Parts.seats)
+print("Rigs/Mannequin:", #Parts.rigs)
+print("Credit Cards:", #Parts.creditCards)
+print("Carwash:", #Parts.carwash)
+print("Tools:", #Parts.tools)
+print("Job Givers:", #Parts.jobGivers)
+print("Lights:", #Parts.lights)
+print("TOTAL PARTS:", totalParts)
+print("=====================================")
